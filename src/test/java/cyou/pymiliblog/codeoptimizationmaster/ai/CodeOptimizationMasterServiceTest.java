@@ -1,11 +1,10 @@
 package cyou.pymiliblog.codeoptimizationmaster.ai;
 
+import cyou.pymiliblog.codeoptimizationmaster.ai.service.CodeOptimizationMasterService;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest
@@ -17,6 +16,6 @@ class CodeOptimizationMasterServiceTest {
 
     @Test
     void chat() {
-        System.out.println(service.chat("你好！"));
+        // System.out.println(service.chat("你好！"));
     }
 }
