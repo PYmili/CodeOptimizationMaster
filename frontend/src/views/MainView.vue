@@ -11,7 +11,7 @@
         <SidebarMenu />
       </el-aside>
 
-        <el-main class="main-chat" ref="messagesContainer">
+        <el-main class="main-chat">
           <div class="chat-messages">
             <ChatMessage v-for="(msg, i) in messages" :key="i" :message="msg" />
           </div>
@@ -21,7 +21,7 @@
                 :width="isMobile ? '90vw' : '50vw'"
                 height="100px"
                 @send-message="handleSendMessage"
-                @send-file="f => console.log('file:', f)"
+                :disable="chatInputDisable"
             />
           </div>
         </el-main>
@@ -30,41 +30,61 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import {nextTick, onUnmounted, ref} from 'vue'
 import HeaderBar from '@/components/main/HeaderBar.vue'
 import SidebarMenu from '@/components/main/SidebarMenu.vue'
 import ChatMessage from '@/components/main/ChatMessage.vue'
 import ChatInput from '@/components/main/ChatInput.vue'
+import {AiChat} from "@/api/ai/chat.js";
+import logger from "@/utils/logger.js";
 
 const drawer = ref(false)
 const messages = ref([])
-const messagesContainer = ref(null)
 const isMobile = ref(window.innerWidth <= 768)
+const chatInputDisable = ref(false)
+let closeSSE = null;
 
-const handleSendMessage = text => {
-  if (!text) return
-  messages.value.push({ type: 'user', text })
-  simulateSSE(text)
+const handleSendMessage = msg => {
+  if (!msg) return
+  chatInputDisable.value = true
+  messages.value.push(msg)
+  simulateSSE(msg)
 }
 
-const simulateSSE = userMessage => {
-  const aiMsg = { type: 'ai', text: '' }
+const simulateSSE = async (userMessage) => {
+  const aiMsg = { type: 'ai', text: ref(''), loading: ref(true) }
   messages.value.push(aiMsg)
-  const fullText = `这是 AI 对"${userMessage}"的回复，演示逐字输出效果。`
-  let i = 0
-  const timer = setInterval(() => {
-    if (i < fullText.length) {
-      aiMsg.text += fullText[i++]
-      scrollToBottom()
-    } else clearInterval(timer)
-  }, 50)
+  closeSSE = AiChat(
+      {id: '1973991220090597377', message: userMessage.text},
+      event => {
+        aiMsg.text.value += event.data
+        aiMsg.loading.value = false
+        scrollToBottom()
+      },
+      () => {
+        logger.error("ai chat error")
+        chatInputDisable.value = false
+        aiMsg.loading.value = false
+      },
+      () => {
+        chatInputDisable.value = false
+        aiMsg.loading.value = false
+        scrollToBottom()
+      }
+  );
 }
 
-const scrollToBottom = () =>
-    nextTick(() => {
-      const el = messagesContainer.value
-      if (el) el.scrollTop = el.scrollHeight
-    })
+const scrollToBottom = () => {
+  nextTick(() => {
+    const el = document.querySelector('.main-chat')
+    if (el) el.scrollTop = el.scrollHeight
+    else logger.error("scrollToBottom fail! el dom is: ", el)
+  })
+}
+
+onUnmounted(() => {
+  if (closeSSE) closeSSE()
+})
 </script>
 
 <style scoped>
